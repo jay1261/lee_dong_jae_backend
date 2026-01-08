@@ -22,7 +22,10 @@ public enum ErrorType {
     WITHDRAW_LIMIT_EXCEEDED(HttpStatus.CONFLICT, "일일 출금 한도를 초과했습니다."),
 
     DEPOSIT_AMOUNT_REQUIRED(HttpStatus.BAD_REQUEST, "입금 금액을 입력해주세요."),
-    DEPOSIT_AMOUNT_INVALID(HttpStatus.BAD_REQUEST, "입금 금액은 0보다 커야 합니다.");
+    DEPOSIT_AMOUNT_INVALID(HttpStatus.BAD_REQUEST, "입금 금액은 0보다 커야 합니다."),
+
+    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다.")
+    ;
 
     private final HttpStatus httpStatus;
     private final String message;
