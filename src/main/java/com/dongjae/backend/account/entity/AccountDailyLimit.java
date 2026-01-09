@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 import java.util.Date;
 
 @Entity
-@Table(name = "account_settings")
+@Table(name = "account_daily_limits")
 @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
 public class AccountDailyLimit {

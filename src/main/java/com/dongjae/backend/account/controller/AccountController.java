@@ -1,12 +1,32 @@
 package com.dongjae.backend.account.controller;
 
+import com.dongjae.backend.account.dto.AccountResponseDto;
 import com.dongjae.backend.account.service.AccountService;
+import com.dongjae.backend.common.enums.SuccessType;
+import com.dongjae.backend.common.response.BaseResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/api/accounts")
 public class AccountController {
     private final AccountService accountService;
 
+    @PostMapping
+    public ResponseEntity<BaseResponse<AccountResponseDto>> createAccount(){
+        AccountResponseDto responseDto = accountService.addAccount();
+        SuccessType successType = SuccessType.ACCOUNT_CREATED;
+
+        BaseResponse<AccountResponseDto> response = new BaseResponse<>(
+                successType.getHttpStatus().value(),
+                successType.getMessage(),
+                responseDto
+        );
+
+        return ResponseEntity.status(successType.getHttpStatus().value()).body(response);
+    }
 }

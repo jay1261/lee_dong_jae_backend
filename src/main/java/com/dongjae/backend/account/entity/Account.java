@@ -2,12 +2,14 @@ package com.dongjae.backend.account.entity;
 
 import com.dongjae.backend.common.enums.AccountStatus;
 import jakarta.persistence.*;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
+@Getter
 @Entity
 @Table(name = "accounts")
 @NoArgsConstructor
@@ -34,4 +36,14 @@ public class Account {
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+
+    public static Account create(AccountPolicy policy, String accountNumber){
+        Account account = new Account();
+        account.accountNumber = accountNumber;
+        account.accountPolicy = policy;
+        account.balance = 0L;
+        account.status = AccountStatus.ACTIVE;
+        return account;
+    }
 }
