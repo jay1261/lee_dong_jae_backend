@@ -6,15 +6,21 @@ import com.dongjae.backend.common.enums.AccountStatus;
 import com.dongjae.backend.common.enums.ErrorType;
 import com.dongjae.backend.common.enums.TransactionType;
 import com.dongjae.backend.common.exception.CustomException;
+import com.dongjae.backend.common.response.PageResponse;
 import com.dongjae.backend.transaction.dto.*;
 import com.dongjae.backend.transaction.entity.Transaction;
 import com.dongjae.backend.transaction.repository.TransactionRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -102,5 +108,20 @@ public class TransactionService {
                 fromTransaction.getFee(),
                 fromAccount.getBalance()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<TransactionHistoryResponseDto> getTransactions(String accountNumber, int page, int size) {
+        Long accountId = accountService.getAccountId(accountNumber);
+
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
+
+        Page<Transaction> transactions = transactionRepository.findByAccountId(accountId, pageable);
+
+        List<TransactionHistoryResponseDto> dtos = transactions.stream()
+                .map(TransactionHistoryResponseDto::new)
+                .toList();
+
+        return new PageResponse<>(dtos, transactions.getNumber() + 1, transactions.getSize(), transactions.getTotalElements(), transactions.getTotalPages());
     }
 }

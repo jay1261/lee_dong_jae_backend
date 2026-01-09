@@ -202,4 +202,12 @@ public class AccountService {
     public void updateBalance(Account account, Long amount) {
         account.updateBalance(amount);
     }
+
+    public Long getAccountId(String accountNumber) {
+        Account account = accountRepository.findByAccountNumber(accountNumber).orElseThrow(
+                ()-> new CustomException(ErrorType.ACCOUNT_NOT_FOUND)
+        );
+
+        return account.getId();
+    }
 }

@@ -2,6 +2,7 @@ package com.dongjae.backend.transaction.controller;
 
 import com.dongjae.backend.common.enums.SuccessType;
 import com.dongjae.backend.common.response.BaseResponse;
+import com.dongjae.backend.common.response.PageResponse;
 import com.dongjae.backend.transaction.dto.*;
 import com.dongjae.backend.transaction.service.TransactionService;
 import jakarta.validation.Valid;
@@ -68,5 +69,24 @@ public class TransactionController {
 
         return ResponseEntity.status(successType.getHttpStatus().value())
                 .body(response);
+    }
+
+
+    @GetMapping("/accounts/{accountNumber}/transactions")
+    public ResponseEntity<BaseResponse<PageResponse<TransactionHistoryResponseDto>>> getTransactions(
+            @PathVariable String accountNumber,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        PageResponse<TransactionHistoryResponseDto> responseDto = transactionService.getTransactions(accountNumber, page, size);
+        SuccessType successType = SuccessType.TRANSACTION_HISTORY_RETRIEVED;
+
+        BaseResponse<PageResponse<TransactionHistoryResponseDto>> response = new BaseResponse<>(
+                successType.getHttpStatus().value(),
+                successType.getMessage(),
+                responseDto
+        );
+
+        return ResponseEntity.status(successType.getHttpStatus().value()).body(response);
     }
 }
