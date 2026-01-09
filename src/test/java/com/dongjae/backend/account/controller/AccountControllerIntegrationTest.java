@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -30,6 +31,7 @@ import org.springframework.http.MediaType;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@ActiveProfiles("test")
 public class AccountControllerIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
@@ -97,5 +99,5 @@ public class AccountControllerIntegrationTest {
                 .andExpect(jsonPath("$.httpCode").value(404))
                 .andExpect(jsonPath("$.errorCode").value("ACCOUNT_NOT_FOUND"))
                 .andExpect(jsonPath("$.message").value("존재하지 않는 계좌번호입니다."));
-    }   
+    }
 }
