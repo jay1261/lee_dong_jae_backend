@@ -8,6 +8,7 @@ import com.dongjae.backend.account.repository.AccountRepository;
 import com.dongjae.backend.account.repository.AccountSettingRepository;
 
 import com.dongjae.backend.transaction.dto.DepositRequestDto;
+import com.dongjae.backend.transaction.dto.TransferRequestDto;
 import com.dongjae.backend.transaction.dto.WithdrawRequestDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
@@ -49,20 +50,27 @@ class TransactionControllerIntegrationTest {
     private ObjectMapper objectMapper;
 
     private Account testAccount;
+    private Account testAccount2;
 
     @BeforeEach
     void setUp() {
         // 기본 정책 생성
-        AccountPolicy policy = new AccountPolicy(BigDecimal.ZERO, "BASIC");
+        AccountPolicy policy = new AccountPolicy(new BigDecimal("0.01"), "BASIC");
         accountPolicyRepository.save(policy);
 
         // 계좌 생성
         testAccount = Account.create(policy, "20260109-00000001");
         accountRepository.save(testAccount);
 
+        testAccount2 = Account.create(policy, "20260109-00000002");
+        accountRepository.save(testAccount2);
+
         // 계좌 설정 생성
         AccountSetting setting = AccountSetting.createDefault(testAccount);
         accountSettingRepository.save(setting);
+
+        AccountSetting setting2 = AccountSetting.createDefault(testAccount2);
+        accountSettingRepository.save(setting2);
 
         testAccount.updateBalance(5_000_000L);
     }
@@ -127,6 +135,55 @@ class TransactionControllerIntegrationTest {
                 .andExpect(jsonPath("$.httpCode").value(409))
                 .andExpect(jsonPath("$.errorCode").value("WITHDRAW_LIMIT_EXCEEDED"))
                 .andExpect(jsonPath("$.message").value("일일 출금 한도를 초과했습니다."));
+    }
+
+    @Test
+    @DisplayName("이체 API 통합 테스트 - 성공")
+    void transfer_success() throws Exception {
+        Account fromAccount = testAccount;
+        Account toAccount = testAccount2;
+
+        // 요청 DTO
+        TransferRequestDto request = new TransferRequestDto(
+                fromAccount.getAccountNumber(),
+                toAccount.getAccountNumber(),
+                1_000L
+        );
+
+        mockMvc.perform(post("/api/transactions/transfer")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.httpCode").value(201))
+                .andExpect(jsonPath("$.message").value("이체에 성공하였습니다."))
+                .andExpect(jsonPath("$.data.fromAccountNumber").value(fromAccount.getAccountNumber()))
+                .andExpect(jsonPath("$.data.toAccountNumber").value(toAccount.getAccountNumber()))
+                .andExpect(jsonPath("$.data.amount").value(1_000))
+                .andExpect(jsonPath("$.data.fee").value(10)) // 1% 수수료
+                .andExpect(jsonPath("$.data.balance").value(4998990)); // 10_000 - 1_000 - 10
+    }
+
+    @Test
+    @DisplayName("이체 API 통합 테스트 - 실패(잔액 부족)")
+    void transfer_fail_insufficientBalance() throws Exception {
+        Account fromAccount = testAccount;
+        Account toAccount = testAccount2;
+
+        TransferRequestDto request = new TransferRequestDto(
+                fromAccount.getAccountNumber(),
+                toAccount.getAccountNumber(),
+                6_000_000L
+        );
+
+        mockMvc.perform(post("/api/transactions/transfer")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.httpCode").value(409))
+                .andExpect(jsonPath("$.errorCode").value("INSUFFICIENT_BALANCE"))
+                .andExpect(jsonPath("$.message").value("잔액이 부족합니다."));
     }
 
 }

@@ -13,10 +13,7 @@ import com.dongjae.backend.account.entity.Account;
 import com.dongjae.backend.account.entity.AccountPolicy;
 import com.dongjae.backend.common.enums.ErrorType;
 import com.dongjae.backend.common.exception.CustomException;
-import com.dongjae.backend.transaction.dto.DepositRequestDto;
-import com.dongjae.backend.transaction.dto.DepositResponseDto;
-import com.dongjae.backend.transaction.dto.WithdrawRequestDto;
-import com.dongjae.backend.transaction.dto.WithdrawResponseDto;
+import com.dongjae.backend.transaction.dto.*;
 import com.dongjae.backend.transaction.entity.Transaction;
 import com.dongjae.backend.transaction.repository.TransactionRepository;
 import com.dongjae.backend.transaction.service.TransactionService;
@@ -92,4 +89,59 @@ class TransactionServiceTest {
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining(ErrorType.WITHDRAW_LIMIT_EXCEEDED.getMessage());
     }
+
+    @Test
+    void 이체_성공() {
+        // given
+        Account fromAccount = Account.create(new AccountPolicy(new BigDecimal("0.01"), "BASIC"), "20260109-00000001");
+        fromAccount.updateBalance(10_000L);
+        Account toAccount = Account.create(new AccountPolicy(new BigDecimal("0.01"), "BASIC"), "20260109-00000002");
+        toAccount.updateBalance(5_000L);
+
+        TransferRequestDto request = new TransferRequestDto(
+                fromAccount.getAccountNumber(),
+                toAccount.getAccountNumber(),
+                1_000L
+        );
+
+        given(accountService.getAccountByNumber(fromAccount.getAccountNumber())).willReturn(fromAccount);
+        given(accountService.getAccountByNumber(toAccount.getAccountNumber())).willReturn(toAccount);
+        doNothing().when(accountService).checkAndUpdateDailyLimit(fromAccount, 1_000L, false);
+        doNothing().when(accountService).updateBalance(fromAccount, -1_010L); // 1000 + 수수료 10
+        doNothing().when(accountService).updateBalance(toAccount, 1_000L);
+
+        given(transactionRepository.save(any(Transaction.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+        // when
+        TransferResponseDto response = transactionService.transfer(request);
+
+        // then
+        assertThat(response.getFromAccountNumber()).isEqualTo(fromAccount.getAccountNumber());
+        assertThat(response.getToAccountNumber()).isEqualTo(toAccount.getAccountNumber());
+        assertThat(response.getAmount()).isEqualTo(1000L);
+        assertThat(response.getFee()).isEqualTo(10L); // fee = 1000 * 0.01
+    }
+
+    @Test
+    void 이체_실패_잔액부족() {
+        // given
+        Account fromAccount = Account.create(new AccountPolicy(new BigDecimal("0.01"), "BASIC"), "20260109-00000001");
+        fromAccount.updateBalance(500L); // 잔액 부족
+        Account toAccount = Account.create(new AccountPolicy(new BigDecimal("0.01"), "BASIC"), "20260109-00000002");
+
+        TransferRequestDto request = new TransferRequestDto(
+                fromAccount.getAccountNumber(),
+                toAccount.getAccountNumber(),
+                1_000L
+        );
+
+        given(accountService.getAccountByNumber(fromAccount.getAccountNumber())).willReturn(fromAccount);
+        given(accountService.getAccountByNumber(toAccount.getAccountNumber())).willReturn(toAccount);
+        doNothing().when(accountService).checkAndUpdateDailyLimit(fromAccount, 1_000L, false);
+
+        assertThatThrownBy(() -> transactionService.transfer(request))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining(ErrorType.INSUFFICIENT_BALANCE.getMessage());
+    }
+
 }
