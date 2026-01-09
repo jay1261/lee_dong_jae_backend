@@ -42,7 +42,13 @@ docker compose up -d --build
 docker compose down
 ```
 
-  
+### 1.4 포트 충돌 주의
+
+```
+8080 또는 3306 포트를 이미 사용 중인 경우, 
+> docker-compose.yml의 포트 매핑을 수정해 주세요.
+```
+
 </br>
 
 ---
