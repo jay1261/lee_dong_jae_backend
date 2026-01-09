@@ -26,4 +26,9 @@ public class AccountPolicy {
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    public AccountPolicy(BigDecimal feeRate, String policyName){
+        this.feeRate = feeRate;
+        this.policyName = policyName;
+    }
 }
