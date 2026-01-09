@@ -57,4 +57,16 @@ public class Transaction {
         transaction.fee = null;
         return transaction;
     }
+
+    public static Transaction createWithdraw(Account account, long amount) {
+        Transaction transaction = new Transaction();
+        transaction.account = account;
+        transaction.amount = amount;
+        transaction.balanceAfter = account.getBalance();
+        transaction.counterpartyAccount = null;
+        transaction.transactionType = TransactionType.WITHDRAW;
+        transaction.fee = null;
+
+        return transaction;
+    }
 }

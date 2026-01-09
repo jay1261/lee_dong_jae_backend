@@ -5,8 +5,10 @@ import com.dongjae.backend.account.dto.AccountResponseDto;
 import com.dongjae.backend.account.dto.AccountSummaryResponseDto;
 import com.dongjae.backend.account.dto.LimitResponseDto;
 import com.dongjae.backend.account.entity.Account;
+import com.dongjae.backend.account.entity.AccountDailyLimit;
 import com.dongjae.backend.account.entity.AccountPolicy;
 import com.dongjae.backend.account.entity.AccountSetting;
+import com.dongjae.backend.account.repository.AccountDailyLimitRepository;
 import com.dongjae.backend.account.repository.AccountPolicyRepository;
 import com.dongjae.backend.account.repository.AccountRepository;
 import com.dongjae.backend.account.repository.AccountSettingRepository;
@@ -34,7 +36,7 @@ public class AccountService {
     private final AccountRepository accountRepository;
     private final AccountPolicyRepository accountPolicyRepository;
     private final AccountSettingRepository accountSettingRepository;
-
+    private final AccountDailyLimitRepository accountDailyLimitRepository;
     /**
      * 신규 계좌 생성
      * @return 생성된 계좌번호와 출금/이체 한도 정보
@@ -145,6 +147,44 @@ public class AccountService {
                 accounts.getTotalElements(),
                 accounts.getTotalPages()
         );
+    }
+
+    /**
+     * 출금/이체 전 계좌 잔액 및 일일 한도 체크 후 업데이트
+     */
+    @Transactional
+    public void checkAndUpdateDailyLimit(Account account, Long amount, boolean isWithdraw) {
+
+        // 잔액 확인
+        if (account.getBalance() < amount) {
+            throw new CustomException(ErrorType.INSUFFICIENT_BALANCE);
+        }
+
+        // 한도 조회
+        AccountSetting setting = accountSettingRepository.findByAccount(account)
+                .orElseThrow(() -> new CustomException(ErrorType.ACCOUNT_SETTING_NOT_FOUND));
+
+        LocalDate today = LocalDate.now();
+        AccountDailyLimit dailyLimit = accountDailyLimitRepository
+                .findByAccountAndDate(account, today)
+                .orElseGet(() -> AccountDailyLimit.createDefault(account, today));
+
+        if (isWithdraw) {
+            long newWithdraw = dailyLimit.getWithdrawAmount() + amount;
+            if (newWithdraw > setting.getWithdrawLimit()) {
+                throw new CustomException(ErrorType.WITHDRAW_LIMIT_EXCEEDED);
+            }
+            dailyLimit.updateWithdrawAmount(newWithdraw);
+        } else {
+            long newTransfer = dailyLimit.getTransferAmount() + amount;
+            if (newTransfer > setting.getTransferLimit()) {
+                throw new CustomException(ErrorType.TRANSFER_LIMIT_EXCEEDED);
+            }
+            dailyLimit.updateTransferAmount(newTransfer);
+        }
+
+        // DailyLimit 저장
+        accountDailyLimitRepository.save(dailyLimit);
     }
 
     public Account getAccountByNumber(String accountNumber) {

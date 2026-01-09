@@ -2,14 +2,16 @@ package com.dongjae.backend.account.entity;
 
 
 import jakarta.persistence.*;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Date;
 
 @Entity
+@Getter
 @Table(name = "account_daily_limits")
 @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
@@ -29,9 +31,26 @@ public class AccountDailyLimit {
     private Long transferAmount;
 
     @Column(nullable = false)
-    private Date date;
+    private LocalDate date;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    public static AccountDailyLimit createDefault(Account account, LocalDate today) {
+        AccountDailyLimit accountDailyLimit = new AccountDailyLimit();
+        accountDailyLimit.account = account;
+        accountDailyLimit.date = today;
+        accountDailyLimit.withdrawAmount = 0L;
+        accountDailyLimit.transferAmount = 0L;
+
+        return accountDailyLimit;
+    }
+
+    public void updateWithdrawAmount(Long newWithdraw){
+        this.withdrawAmount = newWithdraw;
+    }
+    public void updateTransferAmount(Long newTransfer){
+        this.transferAmount = newTransfer;
+    }
 }

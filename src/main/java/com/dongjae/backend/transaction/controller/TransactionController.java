@@ -4,6 +4,8 @@ import com.dongjae.backend.common.enums.SuccessType;
 import com.dongjae.backend.common.response.BaseResponse;
 import com.dongjae.backend.transaction.dto.DepositRequestDto;
 import com.dongjae.backend.transaction.dto.DepositResponseDto;
+import com.dongjae.backend.transaction.dto.WithdrawRequestDto;
+import com.dongjae.backend.transaction.dto.WithdrawResponseDto;
 import com.dongjae.backend.transaction.service.TransactionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,24 @@ public class TransactionController {
         SuccessType successType = SuccessType.DEPOSIT_SUCCESS;
 
         BaseResponse<DepositResponseDto> response = new BaseResponse<>(
+                successType.getHttpStatus().value(),
+                successType.getMessage(),
+                responseDto
+        );
+
+        return ResponseEntity.status(successType.getHttpStatus().value())
+                .body(response);
+    }
+
+    @PostMapping("/accounts/{accountNumber}/transactions/withdraw")
+    public ResponseEntity<BaseResponse<WithdrawResponseDto>> withdraw(
+            @PathVariable String accountNumber,
+            @Valid @RequestBody WithdrawRequestDto request
+    ) {
+        WithdrawResponseDto responseDto = transactionService.withdraw(accountNumber, request);
+        SuccessType successType = SuccessType.WITHDRAW_SUCCESS;
+
+        BaseResponse<WithdrawResponseDto> response = new BaseResponse<>(
                 successType.getHttpStatus().value(),
                 successType.getMessage(),
                 responseDto
