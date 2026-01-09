@@ -50,4 +50,8 @@ public class Account {
     public void updateStatus(AccountStatus accountStatus){
         this.status = accountStatus;
     }
+
+    public void updateBalance(Long amount) {
+        this.balance = this.balance + amount;
+    }
 }

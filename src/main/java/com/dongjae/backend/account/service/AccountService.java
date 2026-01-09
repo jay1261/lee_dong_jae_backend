@@ -14,6 +14,8 @@ import com.dongjae.backend.common.enums.AccountStatus;
 import com.dongjae.backend.common.enums.ErrorType;
 import com.dongjae.backend.common.exception.CustomException;
 import com.dongjae.backend.common.response.PageResponse;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -121,9 +123,15 @@ public class AccountService {
         );
     }
 
+    /**
+     * 계좌 전체 조회
+     * @param page page 번호
+     * @param size size 크기
+     * @return 계좌번호, 상태 리스트, 페이지 정보
+     */
     @Transactional(readOnly = true)
     public PageResponse<AccountSummaryResponseDto> getAllAccounts(int page, int size) {
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("id").descending());
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
         Page<Account> accounts = accountRepository.findAll(pageable);
 
         List<AccountSummaryResponseDto> content = accounts.stream()
@@ -137,5 +145,21 @@ public class AccountService {
                 accounts.getTotalElements(),
                 accounts.getTotalPages()
         );
+    }
+
+    public Account getAccountByNumber(String accountNumber) {
+        Account account = accountRepository.findByAccountNumber(accountNumber).orElseThrow(
+                ()-> new CustomException(ErrorType.ACCOUNT_NOT_FOUND)
+        );
+
+        if(!account.getStatus().equals(AccountStatus.ACTIVE)){
+            throw new CustomException(ErrorType.ACCOUNT_CLOSED);
+        }
+
+        return account;
+    }
+
+    public void updateBalance(Account account, Long amount) {
+        account.updateBalance(amount);
     }
 }
