@@ -71,6 +71,11 @@ public class TransactionService {
         );
     }
 
+    /**
+     * 이체
+     * @param request 이체 요청 DTO
+     * @return 이체 결과 DTO
+     */
     @Transactional
     public TransferResponseDto transfer(TransferRequestDto request) {
         // 계좌 조회
@@ -110,6 +115,13 @@ public class TransactionService {
         );
     }
 
+    /**
+     * 거래 내역 조회
+     * @param accountNumber 조회할 계좌번호
+     * @param page page number
+     * @param size page size
+     * @return 거래내역 조회 결과 DTO
+     */
     @Transactional(readOnly = true)
     public PageResponse<TransactionHistoryResponseDto> getTransactions(String accountNumber, int page, int size) {
         Long accountId = accountService.getAccountId(accountNumber);

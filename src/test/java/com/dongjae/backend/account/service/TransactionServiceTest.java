@@ -7,12 +7,16 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 
 
 import com.dongjae.backend.account.entity.Account;
 import com.dongjae.backend.account.entity.AccountPolicy;
 import com.dongjae.backend.common.enums.ErrorType;
+import com.dongjae.backend.common.enums.TransactionType;
 import com.dongjae.backend.common.exception.CustomException;
+import com.dongjae.backend.common.response.PageResponse;
 import com.dongjae.backend.transaction.dto.*;
 import com.dongjae.backend.transaction.entity.Transaction;
 import com.dongjae.backend.transaction.repository.TransactionRepository;
@@ -22,6 +26,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
 class TransactionServiceTest {
@@ -142,6 +150,50 @@ class TransactionServiceTest {
         assertThatThrownBy(() -> transactionService.transfer(request))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining(ErrorType.INSUFFICIENT_BALANCE.getMessage());
+    }
+
+    @Test
+    void 거래내역_조회_성공(){
+        // given
+        String accountNumber = "20260109-00000001";
+        Long accountId = 1L;
+        int page = 1;
+        int size = 2;
+
+        when(accountService.getAccountId(accountNumber))
+                .thenReturn(accountId);
+
+        Transaction tx1 = mock(Transaction.class);
+        Transaction tx2 = mock(Transaction.class);
+
+        when(tx1.getTransactionType()).thenReturn(TransactionType.WITHDRAW);
+        when(tx2.getTransactionType()).thenReturn(TransactionType.DEPOSIT);
+
+        when(tx1.getCreatedAt()).thenReturn(LocalDateTime.now());
+        when(tx2.getCreatedAt()).thenReturn(LocalDateTime.now().minusMinutes(10));
+
+        Page<Transaction> transactionPage = new PageImpl<>(
+                List.of(tx1, tx2),
+                PageRequest.of(0, size),
+                2
+        );
+
+        when(transactionRepository.findByAccountId(
+                eq(accountId),
+                any(Pageable.class))
+        ).thenReturn(transactionPage);
+
+        // when
+        PageResponse<TransactionHistoryResponseDto> result =
+                transactionService.getTransactions(accountNumber, page, size);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getPage()).isEqualTo(1);
+        assertThat(result.getSize()).isEqualTo(2);
+        assertThat(result.getTotalElements()).isEqualTo(2);
+        assertThat(result.getTotalPages()).isEqualTo(1);
     }
 
 }

@@ -10,6 +10,8 @@ import com.dongjae.backend.account.repository.AccountSettingRepository;
 import com.dongjae.backend.transaction.dto.DepositRequestDto;
 import com.dongjae.backend.transaction.dto.TransferRequestDto;
 import com.dongjae.backend.transaction.dto.WithdrawRequestDto;
+import com.dongjae.backend.transaction.entity.Transaction;
+import com.dongjae.backend.transaction.repository.TransactionRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,6 +49,9 @@ class TransactionControllerIntegrationTest {
     private AccountPolicyRepository accountPolicyRepository;
 
     @Autowired
+    private TransactionRepository transactionRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     private Account testAccount;
@@ -73,6 +78,15 @@ class TransactionControllerIntegrationTest {
         accountSettingRepository.save(setting2);
 
         testAccount.updateBalance(5_000_000L);
+
+        // 거래내역 생성
+        transactionRepository.save(
+                Transaction.createDeposit(testAccount, 10_000L)
+        );
+
+        transactionRepository.save(
+                Transaction.createWithdraw(testAccount, 5_000L)
+        );
     }
 
     @Test
@@ -186,4 +200,28 @@ class TransactionControllerIntegrationTest {
                 .andExpect(jsonPath("$.message").value("잔액이 부족합니다."));
     }
 
+
+    @Test
+    @DisplayName("거래내역 조회 API 통합 테스트 - 성공")
+    void getTransactions_success() throws Exception {
+        mockMvc.perform(get("/api/accounts/{accountNumber}/transactions",
+                        testAccount.getAccountNumber())
+                        .param("page", "1")
+                        .param("size", "2")
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.httpCode").value(200))
+                .andExpect(jsonPath("$.message").value("거래내역 조회에 성공하였습니다."))
+                .andExpect(jsonPath("$.data.content").isArray())
+                .andExpect(jsonPath("$.data.content.length()").value(2))
+                .andExpect(jsonPath("$.data.page").value(1))
+                .andExpect(jsonPath("$.data.size").value(2))
+                .andExpect(jsonPath("$.data.totalElements").value(2))
+                .andExpect(jsonPath("$.data.totalPages").value(1))
+
+                // 최신순 정렬 확인
+                .andExpect(jsonPath("$.data.content[0].amount").value(5_000))
+                .andExpect(jsonPath("$.data.content[1].amount").value(10_000));
+    }
 }
