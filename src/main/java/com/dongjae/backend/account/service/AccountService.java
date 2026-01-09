@@ -187,8 +187,9 @@ public class AccountService {
         accountDailyLimitRepository.save(dailyLimit);
     }
 
+    @Transactional
     public Account getAccountByNumber(String accountNumber) {
-        Account account = accountRepository.findByAccountNumber(accountNumber).orElseThrow(
+        Account account = accountRepository.findByAccountNumberForUpdate(accountNumber).orElseThrow(
                 ()-> new CustomException(ErrorType.ACCOUNT_NOT_FOUND)
         );
 
