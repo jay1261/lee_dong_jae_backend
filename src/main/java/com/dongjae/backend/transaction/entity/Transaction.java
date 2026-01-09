@@ -70,7 +70,7 @@ public class Transaction {
         return transaction;
     }
 
-    public static Transaction createTransfer(Account fromAccount, Account toAccount, Long amount, long fee, TransactionType transactionType) {
+    public static Transaction createTransfer(Account fromAccount, Account toAccount, Long amount, Long fee, TransactionType transactionType) {
         Transaction transaction = new Transaction();
         transaction.account = fromAccount;
         transaction.amount = amount;

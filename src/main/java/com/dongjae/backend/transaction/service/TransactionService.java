@@ -65,7 +65,6 @@ public class TransactionService {
         );
     }
 
-
     @Transactional
     public TransferResponseDto transfer(TransferRequestDto request) {
         // 계좌 조회
@@ -82,6 +81,7 @@ public class TransactionService {
 
         long totalDeduct = amount + fee;
 
+        // 수수료 포함 잔액 계산
         if(fromAccount.getBalance() < totalDeduct){
             throw new CustomException(ErrorType.INSUFFICIENT_BALANCE);
         }
@@ -90,7 +90,7 @@ public class TransactionService {
         accountService.updateBalance(toAccount, amount);
 
         Transaction fromTransaction = Transaction.createTransfer(fromAccount, toAccount, amount, fee, TransactionType.TRANSFER_OUT);
-        Transaction toTransaction = Transaction.createTransfer(fromAccount, toAccount, amount, fee, TransactionType.TRANSFER_IN);
+        Transaction toTransaction = Transaction.createTransfer(toAccount, fromAccount, amount, null, TransactionType.TRANSFER_IN);
         transactionRepository.save(fromTransaction);
         transactionRepository.save(toTransaction);
 
