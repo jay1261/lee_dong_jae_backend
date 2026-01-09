@@ -14,6 +14,8 @@ public enum ErrorType {
     DEFAULT_ACCOUNT_POLICY_NOT_FOUND(HttpStatus.INTERNAL_SERVER_ERROR, "기본 계좌 정책이 존재하지 않습니다."),
     ACCOUNT_NUMBER_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "계좌번호 생성에 실패했습니다. 잠시 후 다시 시도해주세요."),
     ACCOUNT_SETTING_NOT_FOUND(HttpStatus.NOT_FOUND, "계좌 설정 정보를 찾을 수 없습니다."),
+    ACCOUNT_NUMBER_REQUIRED(HttpStatus.BAD_REQUEST, "계좌번호를 입력해주세요."),
+    COUNTERPARTY_ACCOUNT_NUMBER_REQUIRED(HttpStatus.BAD_REQUEST, "상대방 계좌번호를 입력해주세요."),
 
     TRANSFER_AMOUNT_REQUIRED(HttpStatus.BAD_REQUEST, "이체 금액을 입력해주세요."),
     TRANSFER_AMOUNT_INVALID(HttpStatus.BAD_REQUEST, "이체 금액은 0보다 커야 합니다."),

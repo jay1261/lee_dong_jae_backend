@@ -2,10 +2,7 @@ package com.dongjae.backend.transaction.controller;
 
 import com.dongjae.backend.common.enums.SuccessType;
 import com.dongjae.backend.common.response.BaseResponse;
-import com.dongjae.backend.transaction.dto.DepositRequestDto;
-import com.dongjae.backend.transaction.dto.DepositResponseDto;
-import com.dongjae.backend.transaction.dto.WithdrawRequestDto;
-import com.dongjae.backend.transaction.dto.WithdrawResponseDto;
+import com.dongjae.backend.transaction.dto.*;
 import com.dongjae.backend.transaction.service.TransactionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +42,25 @@ public class TransactionController {
         SuccessType successType = SuccessType.WITHDRAW_SUCCESS;
 
         BaseResponse<WithdrawResponseDto> response = new BaseResponse<>(
+                successType.getHttpStatus().value(),
+                successType.getMessage(),
+                responseDto
+        );
+
+        return ResponseEntity.status(successType.getHttpStatus().value())
+                .body(response);
+    }
+
+    @PostMapping("/transactions/transfer")
+    public ResponseEntity<BaseResponse<TransferResponseDto>> transfer(
+            @Valid @RequestBody TransferRequestDto request
+    ) {
+        // 서비스 호출
+        TransferResponseDto responseDto = transactionService.transfer(request);
+
+        SuccessType successType = SuccessType.TRANSFER_SUCCESS;
+
+        BaseResponse<TransferResponseDto> response = new BaseResponse<>(
                 successType.getHttpStatus().value(),
                 successType.getMessage(),
                 responseDto

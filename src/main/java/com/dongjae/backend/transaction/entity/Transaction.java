@@ -69,4 +69,16 @@ public class Transaction {
 
         return transaction;
     }
+
+    public static Transaction createTransfer(Account fromAccount, Account toAccount, Long amount, long fee, TransactionType transactionType) {
+        Transaction transaction = new Transaction();
+        transaction.account = fromAccount;
+        transaction.amount = amount;
+        transaction.balanceAfter = fromAccount.getBalance();
+        transaction.counterpartyAccount = toAccount;
+        transaction.transactionType = transactionType;
+        transaction.fee = fee;
+
+        return transaction;
+    }
 }

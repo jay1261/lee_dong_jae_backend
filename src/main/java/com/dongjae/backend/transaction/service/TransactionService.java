@@ -4,17 +4,17 @@ import com.dongjae.backend.account.entity.Account;
 import com.dongjae.backend.account.service.AccountService;
 import com.dongjae.backend.common.enums.AccountStatus;
 import com.dongjae.backend.common.enums.ErrorType;
+import com.dongjae.backend.common.enums.TransactionType;
 import com.dongjae.backend.common.exception.CustomException;
-import com.dongjae.backend.transaction.dto.DepositRequestDto;
-import com.dongjae.backend.transaction.dto.DepositResponseDto;
-import com.dongjae.backend.transaction.dto.WithdrawRequestDto;
-import com.dongjae.backend.transaction.dto.WithdrawResponseDto;
+import com.dongjae.backend.transaction.dto.*;
 import com.dongjae.backend.transaction.entity.Transaction;
 import com.dongjae.backend.transaction.repository.TransactionRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
@@ -62,6 +62,45 @@ public class TransactionService {
                 account.getAccountNumber(),
                 transaction.getAmount(),
                 transaction.getBalanceAfter()
+        );
+    }
+
+
+    @Transactional
+    public TransferResponseDto transfer(TransferRequestDto request) {
+        // 계좌 조회
+        Account fromAccount = accountService.getAccountByNumber(request.getFromAccountNumber());
+        Account toAccount = accountService.getAccountByNumber(request.getToAccountNumber());
+
+        // 일일 한도 체크
+        Long amount = request.getAmount();
+        accountService.checkAndUpdateDailyLimit(fromAccount, amount, false);
+
+        // 수수료 계산
+        BigDecimal feeRate = fromAccount.getAccountPolicy().getFeeRate();
+        long fee = BigDecimal.valueOf(amount).multiply(feeRate).longValue();
+
+        long totalDeduct = amount + fee;
+
+        if(fromAccount.getBalance() < totalDeduct){
+            throw new CustomException(ErrorType.INSUFFICIENT_BALANCE);
+        }
+
+        accountService.updateBalance(fromAccount, -totalDeduct);
+        accountService.updateBalance(toAccount, amount);
+
+        Transaction fromTransaction = Transaction.createTransfer(fromAccount, toAccount, amount, fee, TransactionType.TRANSFER_OUT);
+        Transaction toTransaction = Transaction.createTransfer(fromAccount, toAccount, amount, fee, TransactionType.TRANSFER_IN);
+        transactionRepository.save(fromTransaction);
+        transactionRepository.save(toTransaction);
+
+        return new TransferResponseDto(
+                fromTransaction.getId(),
+                fromAccount.getAccountNumber(),
+                toAccount.getAccountNumber(),
+                fromTransaction.getAmount(),
+                fromTransaction.getFee(),
+                fromAccount.getBalance()
         );
     }
 }

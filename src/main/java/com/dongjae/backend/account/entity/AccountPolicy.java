@@ -1,6 +1,7 @@
 package com.dongjae.backend.account.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -9,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
+@Getter
 @Table(name = "account_policies")
 @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
