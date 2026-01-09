@@ -1,6 +1,8 @@
 package com.dongjae.backend.account.service;
 
+import com.dongjae.backend.account.dto.AccountDetailResponseDto;
 import com.dongjae.backend.account.dto.AccountResponseDto;
+import com.dongjae.backend.account.dto.AccountSummaryResponseDto;
 import com.dongjae.backend.account.dto.LimitResponseDto;
 import com.dongjae.backend.account.entity.Account;
 import com.dongjae.backend.account.entity.AccountPolicy;
@@ -11,12 +13,17 @@ import com.dongjae.backend.account.repository.AccountSettingRepository;
 import com.dongjae.backend.common.enums.AccountStatus;
 import com.dongjae.backend.common.enums.ErrorType;
 import com.dongjae.backend.common.exception.CustomException;
-import jakarta.transaction.Transactional;
+import com.dongjae.backend.common.response.PageResponse;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -92,5 +99,43 @@ public class AccountService {
 
         account.updateStatus(AccountStatus.CLOSED);
         accountRepository.save(account);
+    }
+
+    /**
+     * 계좌 단일 조회
+     * @param accountNumber 조회할 계좌번호
+     * @return 계좌번호, 잔액, 상태, 한도 정보
+     */
+    public AccountDetailResponseDto getAccount(String accountNumber) {
+        Account account = accountRepository.findByAccountNumber(accountNumber)
+                .orElseThrow(() -> new CustomException(ErrorType.ACCOUNT_NOT_FOUND));
+
+        AccountSetting setting = accountSettingRepository.findByAccount(account)
+                .orElseThrow(() -> new CustomException(ErrorType.ACCOUNT_SETTING_NOT_FOUND));
+
+        return new AccountDetailResponseDto(
+                account.getAccountNumber(),
+                account.getBalance(),
+                account.getStatus(),
+                new LimitResponseDto(setting)
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<AccountSummaryResponseDto> getAllAccounts(int page, int size) {
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("id").descending());
+        Page<Account> accounts = accountRepository.findAll(pageable);
+
+        List<AccountSummaryResponseDto> content = accounts.stream()
+                .map(AccountSummaryResponseDto::new)
+                .toList();
+
+        return new PageResponse<>(
+                content,
+                accounts.getNumber() + 1, // PageRequest는 0부터 시작하므로 +1
+                accounts.getSize(),
+                accounts.getTotalElements(),
+                accounts.getTotalPages()
+        );
     }
 }
