@@ -23,10 +23,16 @@
 ### 1.2 Run
 ```bash
 # 1) 프로젝트 클론
-git clone <YOUR_REPOSITORY_URL>
-cd <YOUR_REPOSITORY_NAME>
 
-# 2) 도커 실행
+git clone https://github.com/jay1261/lee_dong_jae_backend.git
+cd lee_dong_jae_backend.git
+
+# 2) 프로젝트 빌드
+
+./gradlew clean build
+
+# 3) Docker 컨테이너 실행
+
 docker compose up -d --build
 ```
 
@@ -121,7 +127,11 @@ docker compose down
 }
 ```
 
+</br>
+
 ---
+
+</br>
 
 ## 6. API Request/Response Examples
 
@@ -450,6 +460,9 @@ docker compose down
 
 </details>
 
+
+</br>
+
 ---
 
 </br>
@@ -563,19 +576,32 @@ docker compose down
 
 ## 8. Design Notes
 
-- 확장성
-  - 수수료 정책(account_policies)을 분리하여 계좌 유형별 정책 변경/추가가 용이합니다.
-  - 한도 설정(account_settings)을 분리하여 계좌별 정책 확장이 용이합니다.
+### **1. 확장성 설계**
 
-- 한도 체크
-  - 출금: 일 최대 1,000,000원
-  - 이체: 일 최대 3,000,000원
-  - 일 누적 금액은 account_daily_limits로 관리합니다.
+- **수수료 정책 분리**
+    - 계좌 유형별 수수료 정책을 account_policies 테이블로 분리하여 관리
+    - 신규 계좌 유형 추가 또는 수수료 변경 시 비즈니스 로직 변경 없이 데이터 확장 가능
+- **계좌 설정 분리**
+    - 계좌별 한도 및 정책 정보를 account_settings 테이블로 분리
+    - 계좌 단위 정책 확장(한도, 옵션 등)에 유연하게 대응 가능
 
-- 거래내역
-  - 최신순 정렬
-  - 이체는 TRANSFER_OUT / TRANSFER_IN을 분리 저장하여 조회를 단순화했습니다.
+### **2. 한도 관리 방식**
 
-- 동시성 고려(우대사항)
-  - 
+- **일별 누적 한도 관리**
+    - 출금: 일 최대 1,000,000원
+    - 이체: 일 최대 3,000,000원
+    - 일 누적 금액은 account_daily_limits 테이블에서 관리
 
+### **3. 거래 내역 설계**
+
+- **최신순 정렬**을 기본으로 제공
+- **이체 거래 분리 저장**
+    - TRANSFER_OUT / TRANSFER_IN 으로 각각 저장
+    - 계좌 기준 거래내역 조회 시 조인 없이 단순 조회 가능
+    - 실제 금융 서비스에서 자주 사용하는 패턴
+
+### **4. 동시성 제어**
+
+- **비관적 락(Pessimistic Lock) 적용**
+    - 계좌 조회 시 PESSIMISTIC_WRITE 락 적용
+    - 입금 / 출금 / 이체 요청 동시 처리 시 잔액 정합성 보장
