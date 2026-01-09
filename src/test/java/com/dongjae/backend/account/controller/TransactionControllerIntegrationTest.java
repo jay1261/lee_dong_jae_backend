@@ -8,6 +8,7 @@ import com.dongjae.backend.account.repository.AccountRepository;
 import com.dongjae.backend.account.repository.AccountSettingRepository;
 
 import com.dongjae.backend.transaction.dto.DepositRequestDto;
+import com.dongjae.backend.transaction.dto.WithdrawRequestDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,7 +48,7 @@ class TransactionControllerIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private Account account;
+    private Account testAccount;
 
     @BeforeEach
     void setUp() {
@@ -56,12 +57,14 @@ class TransactionControllerIntegrationTest {
         accountPolicyRepository.save(policy);
 
         // 계좌 생성
-        account = Account.create(policy, "20260109-00000001");
-        accountRepository.save(account);
+        testAccount = Account.create(policy, "20260109-00000001");
+        accountRepository.save(testAccount);
 
         // 계좌 설정 생성
-        AccountSetting setting = AccountSetting.createDefault(account);
+        AccountSetting setting = AccountSetting.createDefault(testAccount);
         accountSettingRepository.save(setting);
+
+        testAccount.updateBalance(5_000_000L);
     }
 
     @Test
@@ -69,15 +72,15 @@ class TransactionControllerIntegrationTest {
     void deposit_success() throws Exception {
         DepositRequestDto requestDto = new DepositRequestDto(10000L);
 
-        mockMvc.perform(post("/api/accounts/{accountNumber}/transactions/deposit", account.getAccountNumber())
+        mockMvc.perform(post("/api/accounts/{accountNumber}/transactions/deposit", testAccount.getAccountNumber())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.httpCode").value(201))
                 .andExpect(jsonPath("$.message").value("입금에 성공하였습니다."))
-                .andExpect(jsonPath("$.data.accountNumber").value(account.getAccountNumber()))
+                .andExpect(jsonPath("$.data.accountNumber").value(testAccount.getAccountNumber()))
                 .andExpect(jsonPath("$.data.amount").value(10000))
-                .andExpect(jsonPath("$.data.balance").value(10000)); // 입금 후 잔액
+                .andExpect(jsonPath("$.data.balance").value(5010000)); // 입금 후 잔액
     }
 
     @Test
@@ -85,7 +88,7 @@ class TransactionControllerIntegrationTest {
     void deposit_fail_invalidAmount() throws Exception {
         DepositRequestDto requestDto = new DepositRequestDto(0L);
 
-        mockMvc.perform(post("/api/accounts/{accountNumber}/transactions/deposit", account.getAccountNumber())
+        mockMvc.perform(post("/api/accounts/{accountNumber}/transactions/deposit", testAccount.getAccountNumber())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isBadRequest())
@@ -93,4 +96,37 @@ class TransactionControllerIntegrationTest {
                 .andExpect(jsonPath("$.errorCode").value("DEPOSIT_AMOUNT_INVALID"))
                 .andExpect(jsonPath("$.message").value("입금 금액은 0보다 커야 합니다."));
     }
+
+
+    @Test
+    @DisplayName("출금 API 통합 테스트 - 성공")
+    void withdraw_success() throws Exception {
+        WithdrawRequestDto request = new WithdrawRequestDto(500_000L);
+
+        mockMvc.perform(post("/api/accounts/{accountNumber}/transactions/withdraw", testAccount.getAccountNumber())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.httpCode").value(201))
+                .andExpect(jsonPath("$.message").value("출금에 성공하였습니다."))
+                .andExpect(jsonPath("$.data.accountNumber").value(testAccount.getAccountNumber()))
+                .andExpect(jsonPath("$.data.amount").value(500_000))
+                .andExpect(jsonPath("$.data.balance").value(4500000));
+    }
+
+    @Test
+    @DisplayName("출금 API 통합 테스트 - 실패 (일일 출금 한도 초과)")
+    void withdraw_fail_exceedDailyLimit() throws Exception {
+        // 일일 한도를 초과하는 금액
+        WithdrawRequestDto request = new WithdrawRequestDto(2_000_000L);
+
+        mockMvc.perform(post("/api/accounts/{accountNumber}/transactions/withdraw", testAccount.getAccountNumber())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.httpCode").value(409))
+                .andExpect(jsonPath("$.errorCode").value("WITHDRAW_LIMIT_EXCEEDED"))
+                .andExpect(jsonPath("$.message").value("일일 출금 한도를 초과했습니다."));
+    }
+
 }

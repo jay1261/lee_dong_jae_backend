@@ -15,6 +15,8 @@ import com.dongjae.backend.common.enums.ErrorType;
 import com.dongjae.backend.common.exception.CustomException;
 import com.dongjae.backend.transaction.dto.DepositRequestDto;
 import com.dongjae.backend.transaction.dto.DepositResponseDto;
+import com.dongjae.backend.transaction.dto.WithdrawRequestDto;
+import com.dongjae.backend.transaction.dto.WithdrawResponseDto;
 import com.dongjae.backend.transaction.entity.Transaction;
 import com.dongjae.backend.transaction.repository.TransactionRepository;
 import com.dongjae.backend.transaction.service.TransactionService;
@@ -52,4 +54,42 @@ class TransactionServiceTest {
         assertThat(response.getBalance()).isEqualTo(account.getBalance());
     }
 
+
+    @Test
+    void 출금_성공() {
+        // given
+        Account account = Account.create(new AccountPolicy(BigDecimal.ZERO, "BASIC"), "20260109-00000001");
+        account.updateBalance(5_000_000L); // 초기 잔액
+
+        WithdrawRequestDto request = new WithdrawRequestDto(1_000_000L);
+
+        given(accountService.getAccountByNumber("20260109-00000001")).willReturn(account);
+        doNothing().when(accountService).checkAndUpdateDailyLimit(account, 1_000_000L, true);
+        given(transactionRepository.save(any(Transaction.class))).willAnswer(i -> i.getArgument(0));
+
+        // when
+        WithdrawResponseDto response = transactionService.withdraw("20260109-00000001", request);
+
+        // then
+        assertThat(response.getAccountNumber()).isEqualTo("20260109-00000001");
+        assertThat(response.getAmount()).isEqualTo(1_000_000L);
+        assertThat(response.getBalance()).isEqualTo(account.getBalance());
+    }
+
+    @Test
+    void 출금_실패_한도초과() {
+        Account account = Account.create(new AccountPolicy(BigDecimal.ZERO, "BASIC"), "20260109-00000001");
+        account.updateBalance(5_000_000L);
+
+        WithdrawRequestDto request = new WithdrawRequestDto(2_000_000L);
+
+        given(accountService.getAccountByNumber("20260109-00000001")).willReturn(account);
+
+        doThrow(new CustomException(ErrorType.WITHDRAW_LIMIT_EXCEEDED))
+                .when(accountService).checkAndUpdateDailyLimit(account, 2_000_000L, true);
+
+        assertThatThrownBy(() -> transactionService.withdraw("20260109-00000001", request))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining(ErrorType.WITHDRAW_LIMIT_EXCEEDED.getMessage());
+    }
 }
