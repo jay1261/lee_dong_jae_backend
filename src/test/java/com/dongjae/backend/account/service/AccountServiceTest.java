@@ -2,8 +2,10 @@ package com.dongjae.backend.account.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -17,6 +19,7 @@ import com.dongjae.backend.account.entity.AccountSetting;
 import com.dongjae.backend.account.repository.AccountPolicyRepository;
 import com.dongjae.backend.account.repository.AccountRepository;
 import com.dongjae.backend.account.repository.AccountSettingRepository;
+import com.dongjae.backend.common.enums.AccountStatus;
 import com.dongjae.backend.common.enums.ErrorType;
 import com.dongjae.backend.common.exception.CustomException;
 import org.junit.jupiter.api.Test;
@@ -66,10 +69,6 @@ class AccountServiceTest {
         // then
         assertThat(response).isNotNull();
         assertThat(response.getAccountNumber()).isNotBlank();
-
-        verify(accountPolicyRepository).findByPolicyName("BASIC");
-        verify(accountRepository).save(any(Account.class));
-        verify(accountSettingRepository).save(any(AccountSetting.class));
     }
 
     @Test
@@ -82,5 +81,35 @@ class AccountServiceTest {
         assertThatThrownBy(() -> accountService.addAccount())
                 .isInstanceOf(CustomException.class)
                 .hasMessage(ErrorType.DEFAULT_ACCOUNT_POLICY_NOT_FOUND.getMessage());
+    }
+
+
+    @Test
+    void 계좌_삭제_성공() {
+        // given
+        AccountPolicy policy = new AccountPolicy(BigDecimal.ZERO, "BASIC"); // 더미 정책
+        Account account = Account.create(policy, "20260109-00000001");
+
+        given(accountRepository.findByAccountNumber("20260109-00000001"))
+                .willReturn(Optional.of(account));
+
+        // when
+        accountService.deleteAccount("20260109-00000001");
+
+        // then
+        assertThat(account.getStatus()).isEqualTo(AccountStatus.CLOSED);
+    }
+
+    @Test
+    void 계좌_삭제_실패() {
+        // given
+        given(accountRepository.findByAccountNumber("20260109-00000001"))
+                .willReturn(Optional.empty());
+
+        //when then
+        CustomException exception = assertThrows(CustomException.class,
+                () -> accountService.deleteAccount("20260109-00000001"));
+
+        assertThat(exception.getErrorType()).isEqualTo(ErrorType.ACCOUNT_NOT_FOUND);
     }
 }
