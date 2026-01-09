@@ -8,6 +8,7 @@ import com.dongjae.backend.account.entity.AccountSetting;
 import com.dongjae.backend.account.repository.AccountPolicyRepository;
 import com.dongjae.backend.account.repository.AccountRepository;
 import com.dongjae.backend.account.repository.AccountSettingRepository;
+import com.dongjae.backend.common.enums.AccountStatus;
 import com.dongjae.backend.common.enums.ErrorType;
 import com.dongjae.backend.common.exception.CustomException;
 import jakarta.transaction.Transactional;
@@ -71,4 +72,25 @@ public class AccountService {
         return date + "-" + random;
     }
 
+    /**
+     * 계좌 삭제 (상태 CLOSED로 변경)
+     * @param accountNumber 삭제할 계좌번호
+     */
+    @Transactional
+    public void deleteAccount(String accountNumber) {
+        Account account = accountRepository.findByAccountNumber(accountNumber).orElseThrow(
+                () -> new CustomException(ErrorType.ACCOUNT_NOT_FOUND)
+        );
+
+        if (account.getStatus() == AccountStatus.CLOSED) {
+            throw new CustomException(ErrorType.ACCOUNT_CLOSED);
+        }
+
+        if (account.getBalance() > 0) {
+            throw new CustomException(ErrorType.ACCOUNT_BALANCE_REMAIN);
+        }
+
+        account.updateStatus(AccountStatus.CLOSED);
+        accountRepository.save(account);
+    }
 }

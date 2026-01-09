@@ -6,9 +6,7 @@ import com.dongjae.backend.common.enums.SuccessType;
 import com.dongjae.backend.common.response.BaseResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -29,4 +27,19 @@ public class AccountController {
 
         return ResponseEntity.status(successType.getHttpStatus().value()).body(response);
     }
+
+    @PatchMapping("/{accountNumber}")
+    public ResponseEntity<BaseResponse<Void>> deleteAccount(@PathVariable String accountNumber) {
+        accountService.deleteAccount(accountNumber);
+        SuccessType successType = SuccessType.ACCOUNT_DELETED;
+
+        BaseResponse<Void> response = new BaseResponse<>(
+                successType.getHttpStatus().value(),
+                successType.getMessage(),
+                null
+        );
+
+        return ResponseEntity.status(successType.getHttpStatus().value()).body(response);
+    }
+
 }

@@ -46,4 +46,8 @@ public class Account {
         account.status = AccountStatus.ACTIVE;
         return account;
     }
+
+    public void updateStatus(AccountStatus accountStatus){
+        this.status = accountStatus;
+    }
 }
