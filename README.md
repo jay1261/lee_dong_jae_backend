@@ -25,7 +25,7 @@
 # 1) 프로젝트 클론
 
 git clone https://github.com/jay1261/lee_dong_jae_backend.git
-cd lee_dong_jae_backend.git
+cd lee_dong_jae_backend
 
 # 2) 프로젝트 빌드
 
